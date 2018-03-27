@@ -23,3 +23,16 @@ module "codecommit-cicd" {
     force_artifact_destroy = "false"                      # Default value
 }
 ```
+
+### CodeCommit Note
+New repositories are **not** created with their default branch. Therefore, once the module has ran you must clone the repository, add a file, and then push to `origin/<repo_default_branch>` to initialize the repository.
+
+Your command line execution might look something like this:
+
+```bash
+$>terraform apply
+$>git clone git clone https://git-codecommit.us-west-2.amazonaws.com/v1/repos/slalom-devops
+$>cd slalom-devops
+$>echo 'hello world' > touch.txt
+$>git commit -a -m 'init master'
+$>git push -u origin master
