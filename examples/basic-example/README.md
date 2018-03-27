@@ -8,14 +8,10 @@ New repositories are **not** created with their default branch. Therefore, once 
 
 Your command line execution might look something like this:
 
-`$>terraform apply`
-
-`$>git clone git clone https://git-codecommit.us-west-2.amazonaws.com/v1/repos/slalom-devops`
-
-`$>cd slalom-devops`
-
-`$>echo 'hello world' > touch.txt`
-
-`$>git commit -a -m 'init master'`
-
-`$>git push -u origin master`
+```bash
+$>terraform apply
+$>git clone git clone https://git-codecommit.us-west-2.amazonaws.com/v1/repos/slalom-devops
+$>cd slalom-devops
+$>echo 'hello world' > touch.txt
+$>git commit -a -m 'init master'
+$>git push -u origin master
