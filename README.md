@@ -8,7 +8,7 @@ Terraform module that stands up a new AWS CodeCommit repository integrated with 
 ## Usage
 ```hcl
 module "codecommit-cicd" {
-    source              = "git::https://github.com/cloudposse/terraform-aws-cicd.git?ref=master"
+    source              = "git::https://github.com/slalompdx/terraform-aws-codecommit-cicd.git?ref=master"
     repo_name           = "new-test-repo"              # Required
     organization_name   = "slalom"                     # Required
     repo_default_branch = "master"                     # Default value
