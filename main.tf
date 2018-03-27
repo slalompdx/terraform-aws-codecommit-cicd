@@ -29,8 +29,9 @@ resource "aws_codecommit_repository" "repo" {
 
 # CodePipeline resources
 resource "aws_s3_bucket" "build_artifact_bucket" {
-  bucket = "${module.unique_label.id}"
-  acl    = "private"
+  bucket        = "${module.unique_label.id}"
+  acl           = "private"
+  force_destroy = "${var.force_artifact_destroy}"
 }
 
 data "aws_iam_policy_document" "codepipeline_assume_policy" {

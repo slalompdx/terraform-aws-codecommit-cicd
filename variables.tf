@@ -34,6 +34,11 @@ variable "repo_default_branch" {
   default     = "master"
 }
 
+variable "force_artifact_destroy" {
+  description = "Force the removal of the artifact S3 bucket on destroy (default: false)."
+  default     = "false"
+}
+
 variable "environment" {
   description = "The environment being deployed (default: dev)"
   default     = "dev"
