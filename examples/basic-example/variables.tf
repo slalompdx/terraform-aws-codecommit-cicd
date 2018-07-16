@@ -59,9 +59,9 @@ variable "build_image" {
   default     = "aws/codebuild/nodejs:6.3.1"
 }
 
-variable "build_privileged_override " {
+variable "build_privileged_override" {
   description = "Set the build privileged override to 'true' if you are not using a CodeBuild supported Docker base image. This is only relevant to building Docker images"
-  default     = false
+  default     = "false"
 }
 
 variable "test_buildspec" {
