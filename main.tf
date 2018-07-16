@@ -276,9 +276,10 @@ resource "aws_codebuild_project" "build_project" {
   }
 
   environment {
-    compute_type = "${var.build_compute_type}"
-    image        = "${var.build_image}"
-    type         = "LINUX_CONTAINER"
+    compute_type    = "${var.build_compute_type}"
+    image           = "${var.build_image}"
+    type            = "LINUX_CONTAINER"
+    privileged_mode = "${var.build.build_privileged_override}"
   }
 
   source {
@@ -300,9 +301,10 @@ resource "aws_codebuild_project" "test_project" {
   }
 
   environment {
-    compute_type = "${var.build_compute_type}"
-    image        = "${var.build_image}"
-    type         = "LINUX_CONTAINER"
+    compute_type    = "${var.build_compute_type}"
+    image           = "${var.build_image}"
+    type            = "LINUX_CONTAINER"
+    privileged_mode = "${var.build.build_privileged_override}"
   }
 
   source {
