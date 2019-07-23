@@ -52,241 +52,78 @@ resource "aws_iam_role" "codepipeline_role" {
 }
 
 # CodePipeline policy needed to use CodeCommit and CodeBuild
+data "template_file" "codepipeline_policy_template" {
+  template = file("${path.module}/iam-policies/codepipeline.tpl")
+  vars = {
+    aws_kms_key     = aws_kms_key.artifact_encryption_key.arn
+    artifact_bucket = aws_s3_bucket.build_artifact_bucket.arn
+  }
+}
+
 resource "aws_iam_role_policy" "attach_codepipeline_policy" {
   name = "${module.unique_label.name}-codepipeline-policy"
   role = aws_iam_role.codepipeline_role.id
 
-  policy = <<EOF
-{
-    "Statement": [
-        {
-            "Action": [
-                "s3:GetObject",
-                "s3:GetObjectVersion",
-                "s3:GetBucketVersioning"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "s3:PutObject"
-            ],
-            "Resource": [
-                "arn:aws:s3:::codepipeline*",
-                "arn:aws:s3:::elasticbeanstalk*"
-            ],
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "codecommit:CancelUploadArchive",
-                "codecommit:GetBranch",
-                "codecommit:GetCommit",
-                "codecommit:GetUploadArchiveStatus",
-                "codecommit:UploadArchive"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "codedeploy:CreateDeployment",
-                "codedeploy:GetApplicationRevision",
-                "codedeploy:GetDeployment",
-                "codedeploy:GetDeploymentConfig",
-                "codedeploy:RegisterApplicationRevision"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "elasticbeanstalk:*",
-                "ec2:*",
-                "elasticloadbalancing:*",
-                "autoscaling:*",
-                "cloudwatch:*",
-                "s3:*",
-                "sns:*",
-                "cloudformation:*",
-                "rds:*",
-                "sqs:*",
-                "ecs:*",
-                "iam:PassRole"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "lambda:InvokeFunction",
-                "lambda:ListFunctions"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "opsworks:CreateDeployment",
-                "opsworks:DescribeApps",
-                "opsworks:DescribeCommands",
-                "opsworks:DescribeDeployments",
-                "opsworks:DescribeInstances",
-                "opsworks:DescribeStacks",
-                "opsworks:UpdateApp",
-                "opsworks:UpdateStack"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "cloudformation:CreateStack",
-                "cloudformation:DeleteStack",
-                "cloudformation:DescribeStacks",
-                "cloudformation:UpdateStack",
-                "cloudformation:CreateChangeSet",
-                "cloudformation:DeleteChangeSet",
-                "cloudformation:DescribeChangeSet",
-                "cloudformation:ExecuteChangeSet",
-                "cloudformation:SetStackPolicy",
-                "cloudformation:ValidateTemplate",
-                "iam:PassRole"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "codebuild:BatchGetBuilds",
-                "codebuild:StartBuild"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "kms:DescribeKey",
-                "kms:GenerateDataKey*",
-                "kms:Encrypt",
-                "kms:ReEncrypt*",
-                "kms:Decrypt"
-            ],
-            "Resource": "${aws_kms_key.artifact_encryption_key.arn}",
-            "Effect": "Allow"
-        }
-    ],
-    "Version": "2012-10-17"
-}
-EOF
+  policy = data.template_file.codepipeline_policy_template.rendered
 
 }
 
 # Encryption key for build artifacts
 resource "aws_kms_key" "artifact_encryption_key" {
-  description = "artifact-encryption-key"
+  description             = "artifact-encryption-key"
   deletion_window_in_days = 10
 }
 
 # CodeBuild IAM Permissions
-resource "aws_iam_role" "codebuild_assume_role" {
-  name = "${module.unique_label.name}-codebuild-role"
-
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "codebuild.amazonaws.com"
-      },
-      "Action": "sts:AssumeRole"
-    }
-  ]
+data "template_file" "codepipeline_assume_role_policy_template" {
+  template = file("${path.module}/iam-policies/codebuild_assume_role.tpl")
 }
-EOF
 
+resource "aws_iam_role" "codebuild_assume_role" {
+  name               = "${module.unique_label.name}-codebuild-role"
+  assume_role_policy = data.template_file.codepipeline_assume_role_policy_template.rendered
+}
+
+
+data "template_file" "codebuild_policy_template" {
+  template = file("${path.module}/iam-policies/codebuild.tpl")
+  vars = {
+    artifact_bucket         = aws_s3_bucket.build_artifact_bucket.arn
+    aws_kms_key             = aws_kms_key.artifact_encryption_key.arn
+    codebuild_project_test  = aws_codebuild_project.test_project.id
+    codebuild_project_build = aws_codebuild_project.build_project.id
+  }
 }
 
 resource "aws_iam_role_policy" "codebuild_policy" {
   name = "${module.unique_label.name}-codebuild-policy"
   role = aws_iam_role.codebuild_assume_role.id
 
-  policy = <<POLICY
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": [
-       "s3:PutObject",
-       "s3:GetObject",
-       "s3:GetObjectVersion",
-       "s3:GetBucketVersioning"
-      ],
-      "Resource": "*",
-      "Effect": "Allow"
-    },
-    {
-      "Effect": "Allow",
-      "Resource": [
-        "${aws_codebuild_project.build_project.id}",
-        "${aws_codebuild_project.test_project.id}"
-      ],
-      "Action": [
-        "codebuild:*"
-      ]
-    },
-    {
-      "Effect": "Allow",
-      "Resource": [
-        "*"
-      ],
-      "Action": [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents"
-      ]
-    },
-    {
-      "Action": [
-        "kms:DescribeKey",
-        "kms:GenerateDataKey*",
-        "kms:Encrypt",
-        "kms:ReEncrypt*",
-        "kms:Decrypt"
-      ],
-      "Resource": "${aws_kms_key.artifact_encryption_key.arn}",
-      "Effect": "Allow"
-    }
-  ]
-}
-POLICY
+  policy = data.template_file.codepipeline_policy_template.rendered
 }
 
 # CodeBuild Section for the Package stage
 resource "aws_codebuild_project" "build_project" {
   name           = "${var.repo_name}-package"
   description    = "The CodeBuild project for ${var.repo_name}"
-  service_role   = "${aws_iam_role.codebuild_assume_role.arn}"
-  build_timeout  = "${var.build_timeout}"
-  encryption_key = "${aws_kms_key.artifact_encryption_key.arn}"
+  service_role   = aws_iam_role.codebuild_assume_role.arn
+  build_timeout  = var.build_timeout
+  encryption_key = aws_kms_key.artifact_encryption_key.arn
 
   artifacts {
     type = "CODEPIPELINE"
   }
 
   environment {
-    compute_type    = "${var.build_compute_type}"
-    image           = "${var.build_image}"
+    compute_type    = var.build_compute_type
+    image           = var.build_image
     type            = "LINUX_CONTAINER"
-    privileged_mode = "${var.build_privileged_override}"
+    privileged_mode = var.build_privileged_override
   }
 
   source {
     type      = "CODEPIPELINE"
-    buildspec = "${var.package_buildspec}"
+    buildspec = var.package_buildspec
   }
 }
 
@@ -294,38 +131,38 @@ resource "aws_codebuild_project" "build_project" {
 resource "aws_codebuild_project" "test_project" {
   name           = "${var.repo_name}-test"
   description    = "The CodeBuild project for ${var.repo_name}"
-  service_role   = "${aws_iam_role.codebuild_assume_role.arn}"
-  build_timeout  = "${var.build_timeout}"
-  encryption_key = "${aws_kms_key.artifact_encryption_key.arn}"
+  service_role   = aws_iam_role.codebuild_assume_role.arn
+  build_timeout  = var.build_timeout
+  encryption_key = aws_kms_key.artifact_encryption_key.arn
 
   artifacts {
     type = "CODEPIPELINE"
   }
 
   environment {
-    compute_type    = "${var.build_compute_type}"
-    image           = "${var.build_image}"
+    compute_type    = var.build_compute_type
+    image           = var.build_image
     type            = "LINUX_CONTAINER"
-    privileged_mode = "${var.build_privileged_override}"
+    privileged_mode = var.build_privileged_override
   }
 
   source {
     type      = "CODEPIPELINE"
-    buildspec = "${var.test_buildspec}"
+    buildspec = var.test_buildspec
   }
 }
 
 # Full CodePipeline
 resource "aws_codepipeline" "codepipeline" {
-  name     = "${var.repo_name}"
-  role_arn = "${aws_iam_role.codepipeline_role.arn}"
+  name     = var.repo_name
+  role_arn = aws_iam_role.codepipeline_role.arn
 
   artifact_store {
-    location = "${aws_s3_bucket.build_artifact_bucket.bucket}"
+    location = aws_s3_bucket.build_artifact_bucket.bucket
     type     = "S3"
 
     encryption_key {
-      id   = "${aws_kms_key.artifact_encryption_key.arn}"
+      id   = aws_kms_key.artifact_encryption_key.arn
       type = "KMS"
     }
   }
@@ -342,8 +179,8 @@ resource "aws_codepipeline" "codepipeline" {
       output_artifacts = ["source"]
 
       configuration = {
-        RepositoryName = "${var.repo_name}"
-        BranchName     = "${var.repo_default_branch}"
+        RepositoryName = var.repo_name
+        BranchName     = var.repo_default_branch
       }
     }
   }
@@ -361,7 +198,7 @@ resource "aws_codepipeline" "codepipeline" {
       version          = "1"
 
       configuration = {
-        ProjectName = "${aws_codebuild_project.test_project.name}"
+        ProjectName = aws_codebuild_project.test_project.name
       }
     }
   }
@@ -379,7 +216,7 @@ resource "aws_codepipeline" "codepipeline" {
       version          = "1"
 
       configuration = {
-        ProjectName = "${aws_codebuild_project.build_project.name}"
+        ProjectName = aws_codebuild_project.build_project.name
       }
     }
   }
