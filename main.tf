@@ -46,6 +46,179 @@ data "aws_iam_policy_document" "codepipeline_assume_policy" {
   }
 }
 
+data "aws_iam_policy_document" "codebuild_assume_policy" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["codebuild.amazonaws.com"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "codepipeline_policy_document" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+      "s3:GetObjectVersion",
+      "s3:GetBucketVersioning"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    effect  = "Allow"
+    actions = ["s3:PutObject"]
+    resources = [
+      "arn:aws:s3:::codepipeline*",
+      "arn:aws:s3:::elasticbeanstalk*"
+    ]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "codecommit:CancelUploadArchive",
+      "codecommit:GetBranch",
+      "codecommit:GetCommit",
+      "codecommit:GetUploadArchiveStatus",
+      "codecommit:UploadArchive"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "codedeploy:CreateDeployment",
+      "codedeploy:GetApplicationRevision",
+      "codedeploy:GetDeployment",
+      "codedeploy:GetDeploymentConfig",
+      "codedeploy:RegisterApplicationRevision"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "elasticbeanstalk:*",
+      "ec2:*",
+      "elasticloadbalancing:*",
+      "autoscaling:*",
+      "cloudwatch:*",
+      "s3:*",
+      "sns:*",
+      "cloudformation:*",
+      "rds:*",
+      "sqs:*",
+      "ecs:*",
+      "iam:PassRole"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "opsworks:CreateDeployment",
+      "opsworks:DescribeApps",
+      "opsworks:DescribeCommands",
+      "opsworks:DescribeDeployments",
+      "opsworks:DescribeInstances",
+      "opsworks:DescribeStacks",
+      "opsworks:UpdateApp",
+      "opsworks:UpdateStack"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "cloudformation:CreateStack",
+      "cloudformation:DeleteStack",
+      "cloudformation:DescribeStacks",
+      "cloudformation:UpdateStack",
+      "cloudformation:CreateChangeSet",
+      "cloudformation:DeleteChangeSet",
+      "cloudformation:DescribeChangeSet",
+      "cloudformation:ExecuteChangeSet",
+      "cloudformation:SetStackPolicy",
+      "cloudformation:ValidateTemplate",
+      "iam:PassRole"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "codebuild:BatchGetBuilds",
+      "codebuild:StartBuild"
+    ]
+    resources = ["*"]
+  }
+  statement {
+    effect = "Allow"
+    actions = [
+      "kms:DescribeKey",
+      "kms:GenerateDataKey*",
+      "kms:Encrypt",
+      "kms:ReEncrypt*",
+      "kms:Decrypt"
+    ]
+    resources = ["${aws_kms_key.artifact_encryption_key.arn}"]
+  }
+}
+
+data "aws_iam_policy_document" "codebuild_policy_document" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "s3:PutObject",
+      "s3:GetObject",
+      "s3:GetObjectVersion",
+      "s3:GetBucketVersioning"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    effect  = "Allow"
+    actions = ["codebuild:*"]
+    resources = [
+      "${aws_codebuild_project.build_project.id}",
+      "${aws_codebuild_project.test_project.id}"
+    ]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "kms:DescribeKey",
+      "kms:GenerateDataKey*",
+      "kms:Encrypt",
+      "kms:ReEncrypt*",
+      "kms:Decrypt"
+    ]
+    resources = ["${aws_kms_key.artifact_encryption_key.arn}"]
+  }
+}
+
 resource "aws_iam_role" "codepipeline_role" {
   name               = "${module.unique_label.name}-codepipeline-role"
   assume_role_policy = data.aws_iam_policy_document.codepipeline_assume_policy.json
