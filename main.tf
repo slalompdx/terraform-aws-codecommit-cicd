@@ -46,6 +46,179 @@ data "aws_iam_policy_document" "codepipeline_assume_policy" {
   }
 }
 
+data "aws_iam_policy_document" "codebuild_assume_policy" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["codebuild.amazonaws.com"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "codepipeline_policy_document" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+      "s3:GetObjectVersion",
+      "s3:GetBucketVersioning"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    effect  = "Allow"
+    actions = ["s3:PutObject"]
+    resources = [
+      "arn:aws:s3:::codepipeline*",
+      "arn:aws:s3:::elasticbeanstalk*"
+    ]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "codecommit:CancelUploadArchive",
+      "codecommit:GetBranch",
+      "codecommit:GetCommit",
+      "codecommit:GetUploadArchiveStatus",
+      "codecommit:UploadArchive"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "codedeploy:CreateDeployment",
+      "codedeploy:GetApplicationRevision",
+      "codedeploy:GetDeployment",
+      "codedeploy:GetDeploymentConfig",
+      "codedeploy:RegisterApplicationRevision"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "elasticbeanstalk:*",
+      "ec2:*",
+      "elasticloadbalancing:*",
+      "autoscaling:*",
+      "cloudwatch:*",
+      "s3:*",
+      "sns:*",
+      "cloudformation:*",
+      "rds:*",
+      "sqs:*",
+      "ecs:*",
+      "iam:PassRole"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "opsworks:CreateDeployment",
+      "opsworks:DescribeApps",
+      "opsworks:DescribeCommands",
+      "opsworks:DescribeDeployments",
+      "opsworks:DescribeInstances",
+      "opsworks:DescribeStacks",
+      "opsworks:UpdateApp",
+      "opsworks:UpdateStack"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "cloudformation:CreateStack",
+      "cloudformation:DeleteStack",
+      "cloudformation:DescribeStacks",
+      "cloudformation:UpdateStack",
+      "cloudformation:CreateChangeSet",
+      "cloudformation:DeleteChangeSet",
+      "cloudformation:DescribeChangeSet",
+      "cloudformation:ExecuteChangeSet",
+      "cloudformation:SetStackPolicy",
+      "cloudformation:ValidateTemplate",
+      "iam:PassRole"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "codebuild:BatchGetBuilds",
+      "codebuild:StartBuild"
+    ]
+    resources = ["*"]
+  }
+  statement {
+    effect = "Allow"
+    actions = [
+      "kms:DescribeKey",
+      "kms:GenerateDataKey*",
+      "kms:Encrypt",
+      "kms:ReEncrypt*",
+      "kms:Decrypt"
+    ]
+    resources = ["${aws_kms_key.artifact_encryption_key.arn}"]
+  }
+}
+
+data "aws_iam_policy_document" "codebuild_policy_document" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "s3:PutObject",
+      "s3:GetObject",
+      "s3:GetObjectVersion",
+      "s3:GetBucketVersioning"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    effect  = "Allow"
+    actions = ["codebuild:*"]
+    resources = [
+      "${aws_codebuild_project.build_project.id}",
+      "${aws_codebuild_project.test_project.id}"
+    ]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "kms:DescribeKey",
+      "kms:GenerateDataKey*",
+      "kms:Encrypt",
+      "kms:ReEncrypt*",
+      "kms:Decrypt"
+    ]
+    resources = ["${aws_kms_key.artifact_encryption_key.arn}"]
+  }
+}
+
 resource "aws_iam_role" "codepipeline_role" {
   name               = "${module.unique_label.name}-codepipeline-role"
   assume_role_policy = data.aws_iam_policy_document.codepipeline_assume_policy.json
@@ -53,216 +226,27 @@ resource "aws_iam_role" "codepipeline_role" {
 
 # CodePipeline policy needed to use CodeCommit and CodeBuild
 resource "aws_iam_role_policy" "attach_codepipeline_policy" {
-  name = "${module.unique_label.name}-codepipeline-policy"
-  role = aws_iam_role.codepipeline_role.id
-
-  policy = <<EOF
-{
-    "Statement": [
-        {
-            "Action": [
-                "s3:GetObject",
-                "s3:GetObjectVersion",
-                "s3:GetBucketVersioning"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "s3:PutObject"
-            ],
-            "Resource": [
-                "arn:aws:s3:::codepipeline*",
-                "arn:aws:s3:::elasticbeanstalk*"
-            ],
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "codecommit:CancelUploadArchive",
-                "codecommit:GetBranch",
-                "codecommit:GetCommit",
-                "codecommit:GetUploadArchiveStatus",
-                "codecommit:UploadArchive"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "codedeploy:CreateDeployment",
-                "codedeploy:GetApplicationRevision",
-                "codedeploy:GetDeployment",
-                "codedeploy:GetDeploymentConfig",
-                "codedeploy:RegisterApplicationRevision"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "elasticbeanstalk:*",
-                "ec2:*",
-                "elasticloadbalancing:*",
-                "autoscaling:*",
-                "cloudwatch:*",
-                "s3:*",
-                "sns:*",
-                "cloudformation:*",
-                "rds:*",
-                "sqs:*",
-                "ecs:*",
-                "iam:PassRole"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "lambda:InvokeFunction",
-                "lambda:ListFunctions"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "opsworks:CreateDeployment",
-                "opsworks:DescribeApps",
-                "opsworks:DescribeCommands",
-                "opsworks:DescribeDeployments",
-                "opsworks:DescribeInstances",
-                "opsworks:DescribeStacks",
-                "opsworks:UpdateApp",
-                "opsworks:UpdateStack"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "cloudformation:CreateStack",
-                "cloudformation:DeleteStack",
-                "cloudformation:DescribeStacks",
-                "cloudformation:UpdateStack",
-                "cloudformation:CreateChangeSet",
-                "cloudformation:DeleteChangeSet",
-                "cloudformation:DescribeChangeSet",
-                "cloudformation:ExecuteChangeSet",
-                "cloudformation:SetStackPolicy",
-                "cloudformation:ValidateTemplate",
-                "iam:PassRole"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "codebuild:BatchGetBuilds",
-                "codebuild:StartBuild"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "kms:DescribeKey",
-                "kms:GenerateDataKey*",
-                "kms:Encrypt",
-                "kms:ReEncrypt*",
-                "kms:Decrypt"
-            ],
-            "Resource": "${aws_kms_key.artifact_encryption_key.arn}",
-            "Effect": "Allow"
-        }
-    ],
-    "Version": "2012-10-17"
-}
-EOF
-
+  name   = "${module.unique_label.name}-codepipeline-policy"
+  role   = aws_iam_role.codepipeline_role.id
+  policy = data.aws_iam_policy_document.codepipeline_policy_document.json
 }
 
 # Encryption key for build artifacts
 resource "aws_kms_key" "artifact_encryption_key" {
-  description = "artifact-encryption-key"
+  description             = "artifact-encryption-key"
   deletion_window_in_days = 10
 }
 
 # CodeBuild IAM Permissions
 resource "aws_iam_role" "codebuild_assume_role" {
-  name = "${module.unique_label.name}-codebuild-role"
-
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "codebuild.amazonaws.com"
-      },
-      "Action": "sts:AssumeRole"
-    }
-  ]
-}
-EOF
-
+  name               = "${module.unique_label.name}-codebuild-role"
+  assume_role_policy = data.aws_iam_policy_document.codebuild_assume_policy.json
 }
 
 resource "aws_iam_role_policy" "codebuild_policy" {
-  name = "${module.unique_label.name}-codebuild-policy"
-  role = aws_iam_role.codebuild_assume_role.id
-
-  policy = <<POLICY
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": [
-       "s3:PutObject",
-       "s3:GetObject",
-       "s3:GetObjectVersion",
-       "s3:GetBucketVersioning"
-      ],
-      "Resource": "*",
-      "Effect": "Allow"
-    },
-    {
-      "Effect": "Allow",
-      "Resource": [
-        "${aws_codebuild_project.build_project.id}",
-        "${aws_codebuild_project.test_project.id}"
-      ],
-      "Action": [
-        "codebuild:*"
-      ]
-    },
-    {
-      "Effect": "Allow",
-      "Resource": [
-        "*"
-      ],
-      "Action": [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents"
-      ]
-    },
-    {
-      "Action": [
-        "kms:DescribeKey",
-        "kms:GenerateDataKey*",
-        "kms:Encrypt",
-        "kms:ReEncrypt*",
-        "kms:Decrypt"
-      ],
-      "Resource": "${aws_kms_key.artifact_encryption_key.arn}",
-      "Effect": "Allow"
-    }
-  ]
-}
-POLICY
+  name   = "${module.unique_label.name}-codebuild-policy"
+  role   = aws_iam_role.codebuild_assume_role.id
+  policy = data.aws_iam_policy_document.codebuild_policy_document.json
 }
 
 # CodeBuild Section for the Package stage
