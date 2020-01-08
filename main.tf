@@ -99,7 +99,7 @@ resource "aws_iam_role_policy" "codebuild_policy" {
   name = "${module.unique_label.name}-codebuild-policy"
   role = aws_iam_role.codebuild_assume_role.id
 
-  policy = data.template_file.codepipeline_policy_template.rendered
+  policy = data.template_file.codebuild_policy_template.rendered
 }
 
 # CodeBuild Section for the Package stage
